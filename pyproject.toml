@@ -38,4 +38,6 @@ dependencies = [
     "ollama>=0.6.2",
     "accelerate>=1.15.0",
     "bitsandbytes>=0.50.2",
+    "google-genai>=2.25.0",
+    "docarray>=0.41.0",
 ]
