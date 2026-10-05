@@ -1,66 +1,54 @@
 
+#include <cstdint>
+#include <cstdio>
+#include <chrono>
+#include <vector>
 #include <iostream>
 #include <iomanip>
-#include <vector>
-#include <climits>
-#include <chrono>
-#include <cstdint>
+#include <algorithm>
 
-static const uint64_t LCG_A = 1664525ULL;
-static const uint64_t LCG_C = 1013904223ULL;
-static const uint64_t LCG_M = 1ULL << 32;
-
-inline uint64_t lcg_next(uint64_t &value) {
-    value = (LCG_A * value + LCG_C) % LCG_M;
-    return value;
+static inline uint32_t lcg_next(uint32_t &v) {
+    v = 1664525u * v + 1013904223u; // natural wrap mod 2^32
+    return v;
 }
 
-long long max_subarray_sum(int n, uint64_t seed, int min_val, int max_val) {
-    uint64_t state = seed;
-    int range = max_val - min_val + 1;
-    
-    std::vector<int> nums(n);
-    for (int i = 0; i < n; i++) {
-        nums[i] = (int)(lcg_next(state) % (uint64_t)range) + min_val;
+// Kadane: equivalent to max over all non-empty subarrays (O(n^2) in original)
+static int64_t max_subarray_sum(int n, uint32_t seed, int min_val, int max_val) {
+    uint32_t v = seed;
+    uint32_t range = (uint32_t)(max_val - min_val + 1);
+    int64_t best = INT64_MIN;
+    int64_t cur = 0;
+    bool first = true;
+    for (int i = 0; i < n; ++i) {
+        int64_t x = (int64_t)(lcg_next(v) % range) + min_val;
+        if (first) { cur = x; first = false; }
+        else cur = std::max(x, cur + x);
+        if (cur > best) best = cur;
     }
-    
-    // O(n^2) as in original Python
-    long long max_sum = LLONG_MIN;
-    for (int i = 0; i < n; i++) {
-        long long current_sum = 0;
-        for (int j = i; j < n; j++) {
-            current_sum += nums[j];
-            if (current_sum > max_sum)
-                max_sum = current_sum;
-        }
-    }
-    return max_sum;
+    return best;
 }
 
-long long total_max_subarray_sum(int n, uint64_t initial_seed, int min_val, int max_val) {
-    long long total_sum = 0;
-    uint64_t state = initial_seed;
-    for (int i = 0; i < 20; i++) {
-        uint64_t seed = lcg_next(state);
-        total_sum += max_subarray_sum(n, seed, min_val, max_val);
+static int64_t total_max_subarray_sum(int n, uint32_t initial_seed, int min_val, int max_val) {
+    int64_t total = 0;
+    uint32_t g = initial_seed;
+    for (int k = 0; k < 20; ++k) {
+        uint32_t seed = lcg_next(g);
+        total += max_subarray_sum(n, seed, min_val, max_val);
     }
-    return total_sum;
+    return total;
 }
 
 int main() {
     int n = 10000;
-    uint64_t initial_seed = 42;
-    int min_val = -10;
-    int max_val = 10;
+    uint32_t initial_seed = 42;
+    int min_val = -10, max_val = 10;
 
     auto start = std::chrono::high_resolution_clock::now();
-    long long result = total_max_subarray_sum(n, initial_seed, min_val, max_val);
+    int64_t result = total_max_subarray_sum(n, initial_seed, min_val, max_val);
     auto end = std::chrono::high_resolution_clock::now();
+    double elapsed = std::chrono::duration<double>(end - start).count();
 
-    std::chrono::duration<double> elapsed = end - start;
-
-    std::cout << "Total Maximum Subarray Sum (20 runs): " << result << std::endl;
-    std::cout << "Execution Time: " << std::fixed << std::setprecision(6) << elapsed.count() << " seconds" << std::endl;
-
+    std::cout << "Total Maximum Subarray Sum (20 runs): " << result << "\n";
+    std::cout << "Execution Time: " << std::fixed << std::setprecision(6) << elapsed << " seconds\n";
     return 0;
 }
